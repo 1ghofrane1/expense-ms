@@ -1,0 +1,61 @@
+/**
+ * Filter Bar Styles
+ */
+
+.filter-bar {
+  margin-bottom: var(--spacing-xl);
+}
+
+.filter-bar h3 {
+  margin-bottom: var(--spacing-lg);
+  color: var(--gray-800);
+  font-size: 1.125rem;
+}
+
+.filter-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: var(--spacing-lg);
+  margin-bottom: var(--spacing-lg);
+}
+
+.filter-group {
+  display: flex;
+  flex-direction: column;
+}
+
+.quick-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacing-sm);
+  align-items: center;
+  margin-bottom: var(--spacing-lg);
+  padding-top: var(--spacing-md);
+  border-top: 1px solid var(--gray-200);
+}
+
+.quick-filters-label {
+  font-weight: 500;
+  color: var(--gray-700);
+  margin-right: var(--spacing-sm);
+}
+
+.filter-actions {
+  display: flex;
+  gap: var(--spacing-md);
+}
+
+.filter-actions button {
+  flex: 1;
+  max-width: 200px;
+}
+
+@media (max-width: 640px) {
+  .filter-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .filter-actions button {
+    max-width: none;
+  }
+}

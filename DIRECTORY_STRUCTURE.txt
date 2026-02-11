@@ -1,0 +1,57 @@
+expense-tracker-microservices/
+├── README.md
+├── expenses-service/
+│   ├── package.json
+│   ├── .env.example
+│   ├── .gitignore
+│   ├── server.js
+│   └── src/
+│       ├── config/
+│       │   └── database.js
+│       ├── models/
+│       │   └── Expense.js
+│       ├── routes/
+│       │   └── expenses.js
+│       ├── middleware/
+│       │   ├── errorHandler.js
+│       │   └── validator.js
+│       └── utils/
+│           └── seed.js
+├── analytics-service/
+│   ├── package.json
+│   ├── .env.example
+│   ├── .gitignore
+│   ├── server.js
+│   └── src/
+│       ├── config/
+│       │   └── index.js
+│       ├── services/
+│       │   └── analyticsService.js
+│       ├── routes/
+│       │   └── analytics.js
+│       └── middleware/
+│           └── errorHandler.js
+└── frontend/
+    ├── package.json
+    ├── .env.example
+    ├── .gitignore
+    ├── index.html
+    ├── vite.config.js
+    └── src/
+        ├── main.jsx
+        ├── App.jsx
+        ├── App.css
+        ├── index.css
+        ├── components/
+        │   ├── Dashboard.jsx
+        │   ├── ExpenseForm.jsx
+        │   ├── ExpenseList.jsx
+        │   ├── SummaryCards.jsx
+        │   └── FilterBar.jsx
+        ├── pages/
+        │   └── Home.jsx
+        ├── services/
+        │   ├── expenseService.js
+        │   └── analyticsService.js
+        └── utils/
+            └── formatters.js
