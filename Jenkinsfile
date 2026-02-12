@@ -4,8 +4,13 @@ pipeline {
   environment {
     // Your Docker Hub username/org
     DOCKERHUB_NAMESPACE = '1ghofrane1'
-    // Image name that will be pushed to Docker Hub
-    IMAGE_NAME = 'expense-ms-expenses'
+    // 3 project image names (same naming style as your local images)
+    EXPENSES_IMAGE = 'expense-ms-expenses-service'
+    ANALYTICS_IMAGE = 'expense-ms-analytics-service'
+    FRONTEND_IMAGE = 'expense-ms-frontend'
+    // Frontend build arguments
+    FRONTEND_EXPENSES_API_URL = 'http://localhost:3005/api'
+    FRONTEND_ANALYTICS_API_URL = 'http://localhost:3006/api'
     // Tag used for this build (easy to explain: one tag per Jenkins build)
     IMAGE_TAG = "${BUILD_NUMBER}"
   }
@@ -18,14 +23,26 @@ pipeline {
       }
     }
 
-    stage('Build Docker Image') {
+    stage('Build Docker Images') {
       steps {
-        // Build one Docker image from the Dockerfile of expenses-service
+        // Build 3 images from the 3 service Dockerfiles
         sh '''
           docker build \
             -f expenses-service/Dockerfile \
-            -t docker.io/${DOCKERHUB_NAMESPACE}/${IMAGE_NAME}:${IMAGE_TAG} \
+            -t docker.io/${DOCKERHUB_NAMESPACE}/${EXPENSES_IMAGE}:${IMAGE_TAG} \
             expenses-service
+
+          docker build \
+            -f analytics-service/Dockerfile \
+            -t docker.io/${DOCKERHUB_NAMESPACE}/${ANALYTICS_IMAGE}:${IMAGE_TAG} \
+            analytics-service
+
+          docker build \
+            -f frontend/Dockerfile \
+            --build-arg VITE_EXPENSES_API_URL=${FRONTEND_EXPENSES_API_URL} \
+            --build-arg VITE_ANALYTICS_API_URL=${FRONTEND_ANALYTICS_API_URL} \
+            -t docker.io/${DOCKERHUB_NAMESPACE}/${FRONTEND_IMAGE}:${IMAGE_TAG} \
+            frontend
         '''
       }
     }
@@ -49,13 +66,22 @@ pipeline {
             # Login to Docker Hub
             echo "${DOCKERHUB_TOKEN}" | docker login -u "${DOCKERHUB_USER}" --password-stdin
 
-            # Push version tag
-            docker push docker.io/${DOCKERHUB_NAMESPACE}/${IMAGE_NAME}:${IMAGE_TAG}
+            # Push version tags
+            docker push docker.io/${DOCKERHUB_NAMESPACE}/${EXPENSES_IMAGE}:${IMAGE_TAG}
+            docker push docker.io/${DOCKERHUB_NAMESPACE}/${ANALYTICS_IMAGE}:${IMAGE_TAG}
+            docker push docker.io/${DOCKERHUB_NAMESPACE}/${FRONTEND_IMAGE}:${IMAGE_TAG}
 
-            # Optional: also push latest for easier pull command
-            docker tag docker.io/${DOCKERHUB_NAMESPACE}/${IMAGE_NAME}:${IMAGE_TAG} \
-                      docker.io/${DOCKERHUB_NAMESPACE}/${IMAGE_NAME}:latest
-            docker push docker.io/${DOCKERHUB_NAMESPACE}/${IMAGE_NAME}:latest
+            # Also push latest tags
+            docker tag docker.io/${DOCKERHUB_NAMESPACE}/${EXPENSES_IMAGE}:${IMAGE_TAG} \
+                      docker.io/${DOCKERHUB_NAMESPACE}/${EXPENSES_IMAGE}:latest
+            docker tag docker.io/${DOCKERHUB_NAMESPACE}/${ANALYTICS_IMAGE}:${IMAGE_TAG} \
+                      docker.io/${DOCKERHUB_NAMESPACE}/${ANALYTICS_IMAGE}:latest
+            docker tag docker.io/${DOCKERHUB_NAMESPACE}/${FRONTEND_IMAGE}:${IMAGE_TAG} \
+                      docker.io/${DOCKERHUB_NAMESPACE}/${FRONTEND_IMAGE}:latest
+
+            docker push docker.io/${DOCKERHUB_NAMESPACE}/${EXPENSES_IMAGE}:latest
+            docker push docker.io/${DOCKERHUB_NAMESPACE}/${ANALYTICS_IMAGE}:latest
+            docker push docker.io/${DOCKERHUB_NAMESPACE}/${FRONTEND_IMAGE}:latest
           '''
         }
       }

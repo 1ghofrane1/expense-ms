@@ -6,8 +6,8 @@ This repository now includes:
 
 The pipeline does:
 1. checkout source from GitHub/GitLab
-2. build a Docker image from `expenses-service/Dockerfile`
-3. push the image to Docker Hub
+2. build 3 Docker images from the service Dockerfiles
+3. push the 3 images to Docker Hub
 
 ## 1) Start Jenkins
 
@@ -56,9 +56,11 @@ If your source repo is private:
 
 Edit these values in `Jenkinsfile`:
 - `DOCKERHUB_NAMESPACE` (your Docker Hub username/org)
-- `IMAGE_NAME` (repository/image name)
+- `EXPENSES_IMAGE`
+- `ANALYTICS_IMAGE`
+- `FRONTEND_IMAGE`
 
-The pipeline automatically tags with `${BUILD_NUMBER}` and also pushes `latest`.
+The pipeline automatically tags with `${BUILD_NUMBER}` and also pushes `latest` for each image.
 `Push to Docker Hub` stage runs only when the checked-out branch is `main`.
 
 ## 5) Run the Job
