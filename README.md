@@ -281,6 +281,19 @@ pm2 start expenses-service/server.js --name expenses-service
 pm2 start analytics-service/server.js --name analytics-service
 ```
 
+## CI/CD Pipeline (Jenkins)
+
+This repository includes a Jenkins pipeline that can:
+1. Checkout source from GitHub/GitLab
+2. Build a Docker image from `expenses-service/Dockerfile`
+3. Push the image to Docker Hub
+
+Files added for CI/CD:
+- `Jenkinsfile`
+- `jenkins/` (Dockerized Jenkins setup)
+
+Setup instructions: see `JENKINS_SETUP.md`.
+
 ## Troubleshooting
 
 ### MongoDB Connection Issues

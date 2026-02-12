@@ -10,6 +10,8 @@ import * as analyticsService from '../services/analyticsService';
 import './Dashboard.css';
 
 function Dashboard({ filters }) {
+  const analyticsApiUrl = import.meta.env.VITE_ANALYTICS_API_URL || 'http://localhost:3002/api';
+  const analyticsBaseUrl = analyticsApiUrl.replace(/\/api\/?$/, '');
   const [summary, setSummary] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -50,7 +52,7 @@ function Dashboard({ filters }) {
         <div className="error-message">
           <strong>Analytics Error:</strong> {error}
           <br />
-          <small>Make sure the analytics service is running on port 3002</small>
+          <small>Make sure the analytics service is reachable at {analyticsBaseUrl}</small>
         </div>
       )}
 

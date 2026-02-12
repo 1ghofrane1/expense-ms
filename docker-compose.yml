@@ -1,0 +1,39 @@
+services:
+  expenses-service:
+    build: ./expenses-service
+    container_name: expenses-service
+    restart: unless-stopped
+    environment:
+      - PORT=3001
+      - NODE_ENV=development
+      - MONGODB_URI=${MONGODB_URI}
+      - CORS_ORIGIN=http://localhost:5175
+    ports:
+      - "3005:3001"
+
+  analytics-service:
+    build: ./analytics-service
+    container_name: analytics-service
+    restart: unless-stopped
+    depends_on:
+      - expenses-service
+    environment:
+      - PORT=3002
+      - CORS_ORIGIN=http://localhost:5175
+      - EXPENSES_SERVICE_URL=http://expenses-service:3001
+    ports:
+      - "3006:3002"
+
+  frontend:
+    build:
+      context: ./frontend
+      args:
+        VITE_EXPENSES_API_URL: http://localhost:3005/api
+        VITE_ANALYTICS_API_URL: http://localhost:3006/api
+    container_name: frontend
+    restart: unless-stopped
+    depends_on:
+      - analytics-service
+      - expenses-service
+    ports:
+      - "5175:80"

@@ -1,0 +1,14 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - ../../base
+images:
+  - name: expense-ms-expenses
+    newName: docker.io/your-dockerhub-username/expense-ms-expenses
+    newTag: "latest"
+  - name: expense-ms-analytics
+    newName: docker.io/your-dockerhub-username/expense-ms-analytics
+    newTag: "latest"
+  - name: expense-ms-frontend
+    newName: docker.io/your-dockerhub-username/expense-ms-frontend
+    newTag: "latest"

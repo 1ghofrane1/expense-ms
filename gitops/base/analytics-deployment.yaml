@@ -1,0 +1,28 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: analytics-service
+  labels:
+    app: analytics-service
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: analytics-service
+  template:
+    metadata:
+      labels:
+        app: analytics-service
+    spec:
+      containers:
+        - name: analytics-service
+          image: expense-ms-analytics:latest
+          ports:
+            - containerPort: 3002
+          env:
+            - name: PORT
+              value: "3002"
+            - name: CORS_ORIGIN
+              value: http://frontend-service
+            - name: EXPENSES_SERVICE_URL
+              value: http://expenses-service:3001
