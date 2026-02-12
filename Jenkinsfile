@@ -13,7 +13,7 @@ pipeline {
   stages {
     stage('Checkout Source') {
       steps {
-        // Jenkins retrieves code from GitHub (configured in the job SCM)
+        // Source is configured in Jenkins job (Pipeline script from SCM)
         checkout scm
       }
     }
@@ -31,8 +31,13 @@ pipeline {
     }
 
     stage('Push to Docker Hub') {
-      // Push only on main branch
-      when { branch 'main' }
+      // Push only for main branch
+      when {
+        expression {
+          env.GIT_BRANCH == 'origin/main' || env.GIT_BRANCH == 'main' || env.BRANCH_NAME == 'main'
+        }
+      }
+
       steps {
         // dockerhub-creds must be a "Username with password" credential in Jenkins
         withCredentials([usernamePassword(
@@ -41,13 +46,13 @@ pipeline {
           passwordVariable: 'DOCKERHUB_TOKEN'
         )]) {
           sh '''
-            // Login to Docker Hub
+            # Login to Docker Hub
             echo "${DOCKERHUB_TOKEN}" | docker login -u "${DOCKERHUB_USER}" --password-stdin
 
-            // Push version tag
+            # Push version tag
             docker push docker.io/${DOCKERHUB_NAMESPACE}/${IMAGE_NAME}:${IMAGE_TAG}
 
-            // Optional: also push latest for easier pull command
+            # Optional: also push latest for easier pull command
             docker tag docker.io/${DOCKERHUB_NAMESPACE}/${IMAGE_NAME}:${IMAGE_TAG} \
                       docker.io/${DOCKERHUB_NAMESPACE}/${IMAGE_NAME}:latest
             docker push docker.io/${DOCKERHUB_NAMESPACE}/${IMAGE_NAME}:latest

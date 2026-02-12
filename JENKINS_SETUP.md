@@ -5,7 +5,7 @@ This repository now includes:
 - a CI/CD pipeline (`Jenkinsfile`)
 
 The pipeline does:
-1. checkout source from GitHub
+1. checkout source from GitHub/GitLab
 2. build a Docker image from `expenses-service/Dockerfile`
 3. push the image to Docker Hub
 
@@ -37,11 +37,20 @@ Create these credentials in `Manage Jenkins -> Credentials`:
 ## 3) Create the Pipeline Job
 
 1. `New Item -> Pipeline`
-2. In `Pipeline definition`, choose `Pipeline script`
-3. Paste the content of `Jenkinsfile`
-4. Save
+2. In `Pipeline definition`, choose `Pipeline script from SCM`
+3. SCM: `Git`
+4. Repository URL: your GitHub/GitLab repository URL
+5. Branch Specifier: `*/main` (or your branch)
+6. Script Path: `Jenkinsfile`
+7. Save
 
-If your source repo is private, uncomment the `credentialsId: 'scm-creds'` line in `Jenkinsfile` and create the matching Jenkins credential.
+Important:
+- Use `Pipeline script from SCM` with this Jenkinsfile version.
+- This is required because the pipeline uses `checkout scm`.
+
+If your source repo is private:
+- add SCM credentials in the job configuration (Git credentials field)
+- create matching Jenkins credentials ID `scm-creds` if you prefer using an ID-based SCM setup
 
 ## 4) Configure Docker Hub Values
 
@@ -50,8 +59,8 @@ Edit these values in `Jenkinsfile`:
 - `IMAGE_NAME` (repository/image name)
 
 The pipeline automatically tags with `${BUILD_NUMBER}` and also pushes `latest`.
-`Push to Docker Hub` stage runs only when `GIT_BRANCH=main`.
+`Push to Docker Hub` stage runs only when the checked-out branch is `main`.
 
-At build time, provide:
-- `GIT_REPO_URL` (your GitHub/GitLab repository URL)
-- `GIT_BRANCH` (usually `main`)
+## 5) Run the Job
+
+Click `Build Now`.
