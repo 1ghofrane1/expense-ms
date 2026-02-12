@@ -1,16 +1,9 @@
 pipeline {
   agent any
 
-  parameters {
-    // Public repo URL (GitHub or GitLab)
-    string(name: 'GIT_REPO_URL', defaultValue: 'https://github.com/your-username/expense-ms.git', description: 'GitHub/GitLab repository URL')
-    // Branch to build
-    string(name: 'GIT_BRANCH', defaultValue: 'main', description: 'Git branch to checkout')
-  }
-
   environment {
     // Your Docker Hub username/org
-    DOCKERHUB_NAMESPACE = 'your-dockerhub-username'
+    DOCKERHUB_NAMESPACE = '1ghofrane1'
     // Image name that will be pushed to Docker Hub
     IMAGE_NAME = 'expense-ms-expenses'
     // Tag used for this build (easy to explain: one tag per Jenkins build)
@@ -20,10 +13,8 @@ pipeline {
   stages {
     stage('Checkout Source') {
       steps {
-        // Jenkins clones the source code from GitHub/GitLab
-        git branch: params.GIT_BRANCH, url: params.GIT_REPO_URL
-        // If your repo is private, use this format instead:
-        // git branch: params.GIT_BRANCH, credentialsId: 'scm-creds', url: params.GIT_REPO_URL
+        // Jenkins retrieves code from GitHub (configured in the job SCM)
+        checkout scm
       }
     }
 
@@ -40,8 +31,8 @@ pipeline {
     }
 
     stage('Push to Docker Hub') {
-      // Push only when the selected branch is "main"
-      when { expression { params.GIT_BRANCH == 'main' } }
+      // Push only on main branch
+      when { branch 'main' }
       steps {
         // dockerhub-creds must be a "Username with password" credential in Jenkins
         withCredentials([usernamePassword(
@@ -50,13 +41,13 @@ pipeline {
           passwordVariable: 'DOCKERHUB_TOKEN'
         )]) {
           sh '''
-            # Login to Docker Hub
+            // Login to Docker Hub
             echo "${DOCKERHUB_TOKEN}" | docker login -u "${DOCKERHUB_USER}" --password-stdin
 
-            # Push version tag
+            // Push version tag
             docker push docker.io/${DOCKERHUB_NAMESPACE}/${IMAGE_NAME}:${IMAGE_TAG}
 
-            # Optional: also push latest for easier pull command
+            // Optional: also push latest for easier pull command
             docker tag docker.io/${DOCKERHUB_NAMESPACE}/${IMAGE_NAME}:${IMAGE_TAG} \
                       docker.io/${DOCKERHUB_NAMESPACE}/${IMAGE_NAME}:latest
             docker push docker.io/${DOCKERHUB_NAMESPACE}/${IMAGE_NAME}:latest
