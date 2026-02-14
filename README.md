@@ -259,6 +259,5 @@ kubectl port-forward -n expenseghof svc/kube-prometheus-stack-prometheus 9092:90
 
 ## 7. Remarques
 
-1. Le mapping Jenkins dans `jenkins/docker-compose.yml` expose `8087:8080`; l'URL locale a utiliser est donc `http://localhost:8087`.
-2. Les secrets (URI MongoDB, tokens) ne doivent jamais etre commites dans Git.
-3. Pour aller plus loin: automatiser le deploiement Kubernetes dans Jenkins ou finaliser un flux GitOps (ArgoCD).
+1. Il faut changer les fichiers .env.example par .env lors du test de l'application
+2. le credential de dockerhub utilsé dans Jenkins est mentionné dans le pdf rendu
