@@ -1,4 +1,4 @@
-# Jenkins Pipeline Setup (Simple Version)
+.# Jenkins Pipeline Setup (Simple Version)
 
 This repository now includes:
 - a ready-to-run Jenkins environment (`jenkins/`)

@@ -1,351 +1,264 @@
-# Expense Tracker - Microservices Application
+# Expense Tracker Microservices
 
-A beginner-friendly microservices web application for tracking personal expenses. Built with React, Node.js, Express, and MongoDB.
+Application web de gestion des depenses basee sur une architecture microservices.
 
-## Architecture
+## 1. Description du projet
 
-This application consists of 3 microservices:
+Le projet contient 3 services:
 
-1. **expenses-service** (Port 3001): Handles CRUD operations for expenses using MongoDB
-2. **analytics-service** (Port 3002): Provides summary analytics by calling expenses-service
-3. **frontend** (Port 5173): React application for the user interface
+1. `expenses-service` (Node.js/Express + MongoDB, port `3001`)
+2. `analytics-service` (Node.js/Express, port `3002`)
+3. `frontend` (React + Vite, servi par Nginx en conteneur)
 
-## Tech Stack
+Le service `expenses-service` expose le CRUD des depenses et stocke les donnees dans MongoDB.
+Le service `analytics-service` ne se connecte pas a MongoDB: il appelle `expenses-service` via HTTP pour calculer les indicateurs.
+Le `frontend` consomme les 2 APIs et affiche dashboard, filtres, tableau et formulaire.
 
-- **Frontend**: React 18 + Vite
-- **Backend**: Node.js + Express
-- **Database**: MongoDB with Mongoose
-- **Communication**: REST API over HTTP
+### Modele de donnee `Expense`
 
-## Prerequisites
+- `title` (obligatoire, min 2)
+- `amount` (obligatoire, > 0)
+- `category` (`Food`, `Transport`, `Shopping`, `Bills`, `Other`)
+- `date` (ISO, obligatoire)
+- `notes` (optionnel, max 200)
+- `createdAt`/`updatedAt` automatiques
 
-- Node.js (v18 or higher)
-- MongoDB (local installation OR MongoDB Atlas account)
-- npm or yarn
+Des validations sont implementees (middleware `express-validator`) avec gestion centralisee des erreurs.
 
-## MongoDB Setup
+## 2. Architecture
 
-### Option A: Local MongoDB
+### 2.1 Architecture fonctionnelle
 
-1. **Install MongoDB** (if not already installed):
-   - **macOS**: `brew install mongodb-community`
-   - **Windows**: Download from [MongoDB Download Center](https://www.mongodb.com/try/download/community)
-   - **Linux**: Follow [MongoDB installation guide](https://docs.mongodb.com/manual/administration/install-on-linux/)
+```text
+[Browser]
+   |
+   v
+[Frontend React]
+   |---------------------------> [expenses-service] ---> [MongoDB]
+   |
+   |---------------------------> [analytics-service] ---HTTP---> [expenses-service]
+```
 
-2. **Start MongoDB service**:
-   - **macOS**: `brew services start mongodb-community`
-   - **Windows**: MongoDB runs as a service after installation
-   - **Linux**: `sudo systemctl start mongod`
+### 2.2 Architecture DevOps
 
-3. **Verify MongoDB is running**:
-   ```bash
-   mongosh
-   # Should connect to mongodb://localhost:27017
-   ```
+```text
+[GitHub Repository]
+        |
+        v
+[Jenkins Pipeline]
+  - checkout
+  - build 3 images Docker
+  - push Docker Hub (tag build + latest, branche main)
+        |
+        v
+[Kubernetes (Minikube)]
+  - Namespace expense-ms
+  - Deployments + Services (ClusterIP)
+  - Secret Kubernetes pour MONGODB_URI
+        |
+        v
+[Acces local via kubectl port-forward]
+```
 
-### Option B: MongoDB Atlas (Cloud)
+## 3. Prerequis
 
-1. Create a free account at [MongoDB Atlas](https://www.mongodb.com/cloud/atlas)
-2. Create a new cluster (free tier available)
-3. Create a database user with password
-4. Whitelist your IP address (or use 0.0.0.0/0 for development)
-5. Get your connection string (should look like):
-   ```
-   mongodb+srv://username:password@cluster0.xxxxx.mongodb.net/expense-tracker
-   ```
+- Git
+- Docker + Docker Compose
+- Compte Docker Hub
+- Minikube + kubectl
+- Helm
+- MongoDB Atlas (ou MongoDB local)
+- Node.js 18+ (utile pour execution locale hors conteneurs)
 
-## Installation & Setup
+## 4. Reproduction complete (environnement + CI/CD + k8s)
 
-### 1. Clone/Download the project
+### 4.1 Clonage
 
 ```bash
-cd expense-tracker-microservices
+git clone https://github.com/1ghofrane1/expense-ms.git
+cd expense-ms
 ```
 
-### 2. Setup Expenses Service
+### 4.2 Variables d'environnement
+
+Creer un fichier `.env` a la racine (utilise pour le secret Kubernetes):
+
+```env
+MONGODB_URI=<votre_uri_mongodb_atlas>
+```
+
+Verifier/adapter aussi les fichiers suivants:
+
+```env
+# expenses-service/.env
+PORT=3001
+NODE_ENV=development
+MONGODB_URI=<votre_uri_mongodb>
+CORS_ORIGIN=http://localhost:5173
+```
+
+```env
+# analytics-service/.env
+PORT=3002
+NODE_ENV=development
+EXPENSES_SERVICE_URL=http://localhost:3001
+CORS_ORIGIN=http://localhost:5173
+```
+
+```env
+# frontend/.env
+VITE_EXPENSES_API_URL=http://localhost:3001/api
+VITE_ANALYTICS_API_URL=http://localhost:3002/api
+```
+
+### 4.3 Build et push Docker images
 
 ```bash
-cd expenses-service
+docker login
 
-# Install dependencies
-npm install
+docker build -f expenses-service/Dockerfile \
+  -t docker.io/1ghofrane1/expense-ms-expenses-service:latest \
+  expenses-service
 
-# Create .env file from example
-cp .env.example .env
+docker build -f analytics-service/Dockerfile \
+  -t docker.io/1ghofrane1/expense-ms-analytics-service:latest \
+  analytics-service
 
-# Edit .env file with your MongoDB connection string
-# For local MongoDB: MONGODB_URI=mongodb://localhost:27017/expense-tracker
-# For MongoDB Atlas: MONGODB_URI=mongodb+srv://username:password@cluster0.xxxxx.mongodb.net/expense-tracker
+docker build -f frontend/Dockerfile \
+  --build-arg VITE_EXPENSES_API_URL=http://localhost:3005/api \
+  --build-arg VITE_ANALYTICS_API_URL=http://localhost:3006/api \
+  -t docker.io/1ghofrane1/expense-ms-frontend:latest \
+  frontend
+
+docker push docker.io/1ghofrane1/expense-ms-expenses-service:latest
+docker push docker.io/1ghofrane1/expense-ms-analytics-service:latest
+docker push docker.io/1ghofrane1/expense-ms-frontend:latest
 ```
 
-### 3. Setup Analytics Service
+### 4.4 Jenkins (CI/CD)
 
 ```bash
-cd ../analytics-service
-
-# Install dependencies
-npm install
-
-# Create .env file from example
-cp .env.example .env
-
-# The default .env should work as-is (points to localhost:3001)
+cd jenkins
+docker compose up -d --build
+docker exec jenkins cat /var/jenkins_home/secrets/initialAdminPassword
+cd ..
 ```
 
-### 4. Setup Frontend
+Acces Jenkins: `http://localhost:8087`.
+
+Creer les credentials Jenkins:
+
+1. `dockerhub-creds` (type: Username with password)
+2. `scm-creds` (optionnel, si repository prive)
+
+Creer le job Pipeline:
+
+1. New Item -> Pipeline
+2. Pipeline script from SCM
+3. SCM: Git
+4. Repository URL: votre repo
+5. Branch: `main`
+6. Script Path: `Jenkinsfile`
+
+Pipeline execute:
+
+1. Checkout source
+2. Build des 3 images Docker
+3. Push vers Docker Hub (uniquement sur branche `main`)
+
+### 4.5 Deploiement Kubernetes (Minikube)
 
 ```bash
-cd ../frontend
+minikube start --driver=docker
 
-# Install dependencies
-npm install
+kubectl create namespace expense-ms
 
-# Create .env file from example
-cp .env.example .env
+kubectl create secret generic expense-ms-secrets \
+  --from-env-file=.env \
+  -n expense-ms \
+  --dry-run=client -o yaml | kubectl apply -f -
 
-# The default .env should work as-is
+kubectl apply -f k8s/
+
+kubectl rollout status deployment/expenses-service -n expense-ms
+kubectl rollout status deployment/analytics-service -n expense-ms
+kubectl rollout status deployment/frontend -n expense-ms
+
+kubectl get deploy,po,svc -n expense-ms
 ```
 
-## Running the Application
+### 4.6 Acces application (port-forward)
 
-You need to run all three services simultaneously. Open 3 separate terminal windows:
-
-### Terminal 1: Expenses Service
+Terminal 1:
 
 ```bash
-cd expenses-service
-npm run dev
+kubectl port-forward -n expense-ms svc/expenses-service 3005:3001
 ```
 
-The service will start on http://localhost:3001
-
-### Terminal 2: Analytics Service
+Terminal 2:
 
 ```bash
-cd analytics-service
-npm run dev
+kubectl port-forward -n expense-ms svc/analytics-service 3006:3002
 ```
 
-The service will start on http://localhost:3002
-
-### Terminal 3: Frontend
+Terminal 3:
 
 ```bash
-cd frontend
-npm run dev
+kubectl port-forward -n expense-ms svc/frontend-service 5175:80
 ```
 
-The frontend will start on http://localhost:5173
+Ouvrir: `http://localhost:5175`
 
-### Access the Application
-
-Open your browser and navigate to: **http://localhost:5173**
-
-## Seeding Sample Data (Optional)
-
-To populate the database with sample expenses for testing:
+### 4.7 Monitoring (Prometheus + Grafana)
 
 ```bash
-cd expenses-service
-npm run seed
+helm repo add prometheus-community https://prometheus-community.github.io/helm-charts
+helm repo update
+
+helm upgrade --install kube-prometheus-stack prometheus-community/kube-prometheus-stack \
+  -n expenseghof --create-namespace
+
+kubectl get pods -n expenseghof
+kubectl get svc -n expenseghof
+
+kubectl get secret -n expenseghof kube-prometheus-stack-grafana \
+  -o jsonpath="{.data.admin-password}" | base64 -d; echo
 ```
 
-This will create 10 sample expenses across different categories.
-
-## API Documentation
-
-### Expenses Service (http://localhost:3001)
-
-#### Health Check
-- **GET** `/health`
-- Response: `{ "status": "ok" }`
-
-#### Get All Expenses (with filters)
-- **GET** `/api/expenses?from=YYYY-MM-DD&to=YYYY-MM-DD&category=Food`
-- Query params (all optional):
-  - `from`: Start date (YYYY-MM-DD)
-  - `to`: End date (YYYY-MM-DD)
-  - `category`: Food | Transport | Shopping | Bills | Other
-
-#### Get Single Expense
-- **GET** `/api/expenses/:id`
-
-#### Create Expense
-- **POST** `/api/expenses`
-- Body:
-  ```json
-  {
-    "title": "Grocery shopping",
-    "amount": 45.50,
-    "category": "Food",
-    "date": "2024-02-11",
-    "notes": "Weekly groceries"
-  }
-  ```
-
-#### Update Expense
-- **PUT** `/api/expenses/:id`
-- Body: Same as create (all fields optional)
-
-#### Delete Expense
-- **DELETE** `/api/expenses/:id`
-
-### Analytics Service (http://localhost:3002)
-
-#### Health Check
-- **GET** `/health`
-
-#### Get Summary
-- **GET** `/api/summary?from=YYYY-MM-DD&to=YYYY-MM-DD`
-- Query params (optional):
-  - `from`: Start date
-  - `to`: End date
-- Response:
-  ```json
-  {
-    "totalAmount": 1234.56,
-    "count": 25,
-    "byCategory": [
-      {
-        "category": "Food",
-        "total": 450.00,
-        "count": 10
-      }
-    ]
-  }
-  ```
-
-## Project Structure
-
-```
-expenses-service/       # Microservice 1: Expense CRUD operations
-├── src/
-│   ├── config/        # Database configuration
-│   ├── models/        # Mongoose schemas
-│   ├── routes/        # Express routes
-│   ├── middleware/    # Error handling & validation
-│   └── utils/         # Seed script
-└── server.js          # Entry point
-
-analytics-service/     # Microservice 2: Analytics & summaries
-├── src/
-│   ├── config/        # Service configuration
-│   ├── services/      # Business logic (calls expenses-service)
-│   ├── routes/        # Express routes
-│   └── middleware/    # Error handling
-└── server.js          # Entry point
-
-frontend/              # React frontend application
-├── src/
-│   ├── components/    # Reusable React components
-│   ├── pages/         # Page components
-│   ├── services/      # API client functions
-│   └── utils/         # Helper functions
-└── vite.config.js     # Vite configuration
-```
-
-## Features
-
-✅ Create, read, update, and delete expenses  
-✅ Filter expenses by date range and category  
-✅ View expense analytics and summaries  
-✅ Category-wise breakdown  
-✅ Clean and responsive UI  
-✅ Input validation and error handling  
-✅ Microservices architecture  
-✅ RESTful API design  
-
-## Building for Production
-
-### Build Frontend
+Acces interfaces:
 
 ```bash
-cd frontend
-npm run build
+kubectl port-forward -n expenseghof svc/kube-prometheus-stack-grafana 3010:80
+kubectl port-forward -n expenseghof svc/kube-prometheus-stack-prometheus 9092:9090
 ```
 
-The production-ready files will be in the `dist/` folder.
+- Grafana: `http://localhost:3010`
+- Prometheus: `http://localhost:9092`
 
-### Running Backend in Production
+## 5. Endpoints API
 
-For production, you would typically:
-1. Set `NODE_ENV=production` in your .env files
-2. Use a process manager like PM2
-3. Set up proper logging
-4. Use environment-specific configuration
+### 5.1 Expenses Service (`3001`)
 
-Example with PM2:
-```bash
-npm install -g pm2
-pm2 start expenses-service/server.js --name expenses-service
-pm2 start analytics-service/server.js --name analytics-service
-```
+- `GET /health`
+- `GET /api/expenses?from=YYYY-MM-DD&to=YYYY-MM-DD&category=...`
+- `GET /api/expenses/:id`
+- `POST /api/expenses`
+- `PUT /api/expenses/:id`
+- `DELETE /api/expenses/:id`
 
-## CI/CD Pipeline (Jenkins)
+### 5.2 Analytics Service (`3002`)
 
-This repository includes a Jenkins pipeline that can:
-1. Checkout source from GitHub/GitLab
-2. Build a Docker image from `expenses-service/Dockerfile`
-3. Push the image to Docker Hub
+- `GET /health`
+- `GET /api/summary?from=YYYY-MM-DD&to=YYYY-MM-DD`
 
-Files added for CI/CD:
-- `Jenkinsfile`
-- `jenkins/` (Dockerized Jenkins setup)
+## 6. Etat actuel de la chaine CI/CD
 
-Setup instructions: see `JENKINS_SETUP.md`.
+- CI automatisee: oui (build + push Docker Hub via Jenkins)
+- CD vers Kubernetes: partiellement automatisee (deploiement fait manuellement via `kubectl`)
+- Monitoring: en place via Helm (`kube-prometheus-stack`)
 
-## Troubleshooting
+## 7. Remarques
 
-### MongoDB Connection Issues
-
-- **Error**: "MongooseServerSelectionError"
-  - Check if MongoDB is running: `mongosh`
-  - Verify connection string in expenses-service/.env
-  - For Atlas: Check network access settings
-
-### Port Already in Use
-
-- **Error**: "EADDRINUSE"
-  - Kill the process using the port:
-    - Find: `lsof -i :3001` (macOS/Linux) or `netstat -ano | findstr :3001` (Windows)
-    - Kill: `kill -9 <PID>` (macOS/Linux) or `taskkill /PID <PID> /F` (Windows)
-
-### CORS Errors
-
-- Make sure all services are running
-- Check that .env files have correct URLs
-- CORS is configured in backend services
-
-### Services Can't Communicate
-
-- Verify all services are running on correct ports
-- Check EXPENSES_SERVICE_URL in analytics-service/.env
-- Check API URLs in frontend/.env
-
-## Development Scripts
-
-### Expenses Service
-- `npm run dev` - Start with nodemon (auto-reload)
-- `npm start` - Start production server
-- `npm run seed` - Seed sample data
-
-### Analytics Service
-- `npm run dev` - Start with nodemon
-- `npm start` - Start production server
-
-### Frontend
-- `npm run dev` - Start development server
-- `npm run build` - Build for production
-- `npm run preview` - Preview production build
-
-## Contributing
-
-This is a learning project. Feel free to:
-- Add new features (e.g., user authentication, categories management)
-- Improve UI/UX
-- Add tests
-- Optimize performance
-
-## License
-
-MIT License - Feel free to use this for learning and development.
+1. Le mapping Jenkins dans `jenkins/docker-compose.yml` expose `8087:8080`; l'URL locale a utiliser est donc `http://localhost:8087`.
+2. Les secrets (URI MongoDB, tokens) ne doivent jamais etre commites dans Git.
+3. Pour aller plus loin: automatiser le deploiement Kubernetes dans Jenkins ou finaliser un flux GitOps (ArgoCD).
